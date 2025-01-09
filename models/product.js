@@ -1,18 +1,5 @@
-const fs = require('fs');
-const path = require('path');
-const rootPath = require('../util/path');
+const db = require('../util/database');
 const Cart = require('./cart');
-
-const p = path.join(rootPath, 'data', 'products.json');
-
-const getProdFromFile = (cb) => {
-  fs.readFile(p, (err, fileContent) => {
-    if (err) {
-      return cb([]);
-    }
-    cb(JSON.parse(fileContent));
-  });
-};
 
 module.exports = class Product {
   constructor(id, title, imageUrl, description, price) {
@@ -24,42 +11,21 @@ module.exports = class Product {
   }
 
   save() {
-    getProdFromFile((products) => {
-      if (this.id) {
-        const existingProdIndex = products.findIndex((item) => item.id === this.id);
-        const updatedProducts = [...products];
-        updatedProducts[existingProdIndex] = this;
-        fs.writeFile(p, JSON.stringify(updatedProducts), (err) => console.log(err));
-        return;
-      }
-
-      this.id = Math.trunc(+Math.random() * 100000000).toString();
-      products.push(this);
-      fs.writeFile(p, JSON.stringify(products), (err) => console.log(err));
-    });
+    return db.execute('INSERT INTO products (title,price,imageUrl,description) VALUES (?,?,?,?)', [
+      this.title,
+      this.price,
+      this.imageUrl,
+      this.description,
+    ]);
   }
 
-  static fetchAll(cb) {
-    getProdFromFile(cb);
+  static fetchAll() {
+    return db.execute('SELECT * FROM products');
   }
 
-  static findById(id, cb) {
-    getProdFromFile((products) => {
-      const product = products.find((elem) => elem.id === id);
-      cb(product);
-    });
+  static findById(id) {
+    return db.execute('SELECT * FROM products WHERE products.id = ?', [id]);
   }
 
-  static deleteProduct(id) {
-    getProdFromFile((products) => {
-      const product = products.find((prod) => prod.id === id);
-      const newProducts = products.filter((item) => item.id !== id);
-      fs.writeFile(p, JSON.stringify(newProducts), (err) => {
-        if (!err) {
-          Cart.deleteProduct(id, product.price);
-        }
-        console.log(err);
-      });
-    });
-  }
+  static deleteProduct(id) {}
 };
